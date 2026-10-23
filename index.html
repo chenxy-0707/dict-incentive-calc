@@ -294,6 +294,16 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
   text-align: center;
 }
 .toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.mode-tag {
+  display: inline-block;
+  background: #EAF3FB;
+  color: var(--primary);
+  border-radius: 20px;
+  padding: 1px 8px;
+  font-size: 11px;
+  font-weight: 400;
+  margin-left: 6px;
+}
 .footer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 12px rgba(0,0,0,0.05); max-width: 520px; margin: 0 auto; }
 .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -319,6 +329,14 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
   <!-- 测算区 -->
   <div id="calc-panel">
     <div class="card">
+      <h2>测算模式</h2>
+      <div class="seg" id="mode-seg">
+        <button data-mode="income" class="active">按主营收入测算</button>
+        <button data-mode="amount">按项目金额测算</button>
+      </div>
+      <div class="hint" id="amount-mode-tip" style="display:none; margin-top:8px;">只知项目总价和利润率时使用：系统自动换算主营收入后测算</div>
+    </div>
+    <div class="card">
       <h2>项目基本信息</h2>
       <div class="field">
         <label>项目类型</label>
@@ -328,7 +346,16 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
           <button data-type="mixed">混合类</button>
         </div>
       </div>
-      <div class="field">
+      <div class="field" id="amount-field" style="display:none;">
+        <label>项目总金额（含税）</label>
+        <div class="unit"><input type="number" id="total-amount" placeholder="请输入项目总金额" min="0" step="0.01"></div>
+      </div>
+      <div class="field" id="profit-rate-field" style="display:none;">
+        <label>项目利润率</label>
+        <div class="unit pct"><input type="number" id="profit-rate" placeholder="请输入百分比，如20" min="0" step="0.01"></div>
+        <div class="hint">主营收入 = 项目总金额 × 利润率 ÷ 10% ÷ 1.06</div>
+      </div>
+      <div class="field" id="income-field">
         <label>项目 DICT 主营收入（不含税）</label>
         <div class="unit"><input type="number" id="income" placeholder="请输入金额" min="0" step="0.01"></div>
       </div>
@@ -527,7 +554,18 @@ function getDeviceId() {
 
 // ============ 状态 ============
 let projType = 'cost';
+let calcMode = 'income';   // 'income' 按主营收入 | 'amount' 按项目金额
 let currentResult = null;
+
+// ============ 模式切换 ============
+document.querySelectorAll('#mode-seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#mode-seg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    calcMode = btn.dataset.mode;
+    updateFields();
+  });
+});
 
 // ============ 类型切换 ============
 document.querySelectorAll('#type-seg button').forEach(btn => {
@@ -542,9 +580,22 @@ function updateFields() {
   const isCost = projType === 'cost';
   const isInvest = projType === 'invest';
   const isMixed = projType === 'mixed';
+  const isAmount = calcMode === 'amount';
+  // 模式相关字段显隐
+  document.getElementById('amount-field').style.display = isAmount ? '' : 'none';
+  document.getElementById('profit-rate-field').style.display = isAmount ? '' : 'none';
+  document.getElementById('income-field').style.display = isAmount ? 'none' : '';
+  document.getElementById('amount-mode-tip').style.display = isAmount ? '' : 'none';
+  // 类型相关字段显隐
   document.getElementById('margin-field').style.display = (isCost || isMixed) ? '' : 'none';
   document.getElementById('cost-field').style.display = (isCost || isMixed) ? '' : 'none';
   document.getElementById('irr-field').style.display = (isInvest || isMixed) ? '' : 'none';
+  // 按项目金额模式下隐藏成本/毛利率/IRR 输入（换算已含口径）
+  if (isAmount) {
+    document.getElementById('margin-field').style.display = 'none';
+    document.getElementById('cost-field').style.display = 'none';
+    document.getElementById('irr-field').style.display = 'none';
+  }
 }
 
 // ============ 标签页切换 ============
@@ -610,7 +661,12 @@ function renderResult(d) {
   html += d.qualified ? '<span class="qualified-tag">符合奖励条件</span>' : '<span class="not-qualified-tag">不符合条件</span>';
   html += '</div>';
   html += `<div class="big-num">${d.qualified ? (d.cap ? d.cap.final : (d.incentive ? d.incentive.total : 0)) : 0}<small> 万元</small></div>`;
-  html += `<div class="sub-line">项目主营收入 ${d.income} 万元</div>`;
+  if (d._converted) {
+    html += `<div class="sub-line">按项目金额换算：总金额 ${d._converted.total_amount} 万元 × 利润率 ${(d._converted.profit_rate*100).toFixed(2)}% ÷ 10% ÷ 1.06</div>`;
+    html += `<div class="sub-line">项目主营收入 ${d.income} 万元（换算值）</div>`;
+  } else {
+    html += `<div class="sub-line">项目主营收入 ${d.income} 万元</div>`;
+  }
   if (d.margin != null) html += `<div class="sub-line">DICT毛利率 ${(d.margin*100).toFixed(2)}%</div>`;
   html += `<div class="sub-line">${d.incentive ? d.incentive.type : ''}</div>`;
 
@@ -654,24 +710,45 @@ function renderError(msg) {
 
 // ============ 测算(纯本地) ============
 async function doCalc() {
-  const income = parseFloat(document.getElementById('income').value);
   const marginInput = document.getElementById('margin').value;
   const costInput = document.getElementById('cost').value;
   const irrInput = document.getElementById('irr').value;
-  if (isNaN(income) || income <= 0) { showToast('请输入项目主营收入'); return; }
+  let income, converted = null;
+  if (calcMode === 'amount') {
+    const totalAmount = parseFloat(document.getElementById('total-amount').value);
+    const profitRate = parseFloat(document.getElementById('profit-rate').value);
+    if (isNaN(totalAmount) || totalAmount <= 0) { showToast('请输入项目总金额'); return; }
+    if (isNaN(profitRate) || profitRate <= 0) { showToast('请输入项目利润率'); return; }
+    // 用户给定公式：主营收入 = 项目总金额 × 项目利润率 / 0.1 / 1.06
+    income = totalAmount * profitRate / 100 / 0.1 / 1.06;
+    income = r4(income);
+    converted = { total_amount: totalAmount, profit_rate: profitRate / 100, income: income };
+  } else {
+    income = parseFloat(document.getElementById('income').value);
+    if (isNaN(income) || income <= 0) { showToast('请输入项目主营收入'); return; }
+  }
   const payload = {
     income: income,
     proj_type: projType,
     margin: marginInput !== '' ? parseFloat(marginInput) / 100 : null,
     cost: costInput !== '' ? parseFloat(costInput) : null,
     irr: irrInput !== '' ? parseFloat(irrInput) / 100 : null,
+    calc_mode: calcMode,
+    converted: converted,
     device: getDeviceId()
   };
+  if (calcMode === 'amount') {
+    // 按项目金额模式下，换算口径已含 10% 毛利基准，毛利率固定按 10% 参与测算
+    payload.margin = 0.10;
+    payload.cost = null;
+    payload.irr = projType === 'invest' ? (irrInput !== '' ? parseFloat(irrInput) / 100 : null) : payload.irr;
+  }
   const btn = document.getElementById('calc-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> 测算中...';
   try {
     const data = calcAll(payload);   // 纯前端计算
+    if (calcMode === 'amount' && payload.converted) data._converted = payload.converted;
     renderResult(data);
     if (data.qualified && data.cap && data.cap.final > 0) playCashSound();
     addLocalHistory(payload, data);  // 本地保存历史
@@ -687,15 +764,24 @@ async function renderHistory() {
   const list = getLocalHistory();
   if (!list.length) { box.innerHTML = '<div class="empty-tip">暂无历史记录</div>'; return; }
   const typeName = { cost: '成本类', invest: '投资类', mixed: '混合类' };
-  box.innerHTML = list.map(r => `
+  box.innerHTML = list.map(r => {
+    const isAmountMode = r.payload && r.payload.calc_mode === 'amount';
+    const conv = r.payload && r.payload.converted;
+    const modeTag = isAmountMode ? '<span class="mode-tag">按金额</span>' : '';
+    const metaParts = [r.time];
+    if (isAmountMode && conv) metaParts.push(`总额 ${conv.total_amount}万 · 利润率 ${(conv.profit_rate*100).toFixed(0)}% · 换算收入 ${conv.income}万`);
+    else metaParts.push(`收入 ${r.summary.income}万${r.summary.margin != null ? ' · 毛利率' + (r.summary.margin * 100).toFixed(0) + '%' : ''}`);
+    metaParts.push(r.summary.qualified ? '符合' : '不符合');
+    return `
     <div class="history-item" onclick="showHistoryDetail(${r.id})" style="cursor:pointer;">
       <div class="history-top">
-        <span class="history-type">${typeName[r.summary.proj_type] || r.summary.proj_type || ''}</span>
+        <span class="history-type">${typeName[r.summary.proj_type] || r.summary.proj_type || ''} ${modeTag}</span>
         <span class="history-detail-btn" style="display:none">详情</span>
         <span class="history-amount">${(r.summary.total || 0).toFixed(2)} 万元</span>
       </div>
-  <div class="history-meta">${r.time} · 收入 ${r.summary.income}万 ${r.summary.margin != null ? '· 毛利率' + (r.summary.margin * 100).toFixed(0) + '%' : ''} ${r.summary.qualified ? '· 符合' : '· 不符合'} · 点击查看详情</div>
-    </div>`).join('');
+  <div class="history-meta">${metaParts.join(' · ')} · 点击查看详情</div>
+    </div>`;
+  }).join('');
 }
 async function showHistoryDetail(id) {
   const rec = getLocalHistory().find(r => r.id === id);

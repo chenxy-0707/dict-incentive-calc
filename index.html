@@ -304,6 +304,45 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
   font-weight: 400;
   margin-left: 6px;
 }
+/* 区县67%激励分解说明 */
+.collapse-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  cursor: pointer;
+  user-select: none;
+}
+.collapse-arrow { font-size: 14px; color: var(--muted); transition: transform .25s; }
+.collapse-arrow.open { transform: rotate(180deg); }
+.collapse-body { display: none; padding-top: 12px; }
+.collapse-body.show { display: block; }
+.collapse-note { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+.collapse-note b { color: var(--primary); }
+.break-table-wrap { overflow-x: auto; }
+.break-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.break-table th {
+  background: #F0F5FA;
+  color: var(--primary-dark);
+  font-weight: 600;
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid #E2EAF3;
+}
+.break-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #EEF2F6;
+  color: var(--text);
+}
+.break-table td.hl { color: var(--primary); font-weight: 600; }
+.break-table tfoot td { background: #F0F5FA; font-weight: 700; padding: 9px 10px; }
+.break-table tfoot td.strong { color: var(--primary); font-size: 15px; }
+.collapse-summary { font-size: 12px; color: var(--text); margin-top: 12px; line-height: 1.7; }
+.collapse-summary .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.collapse-summary .note { color: #8A6D1A; }
+.collapse-summary b { color: var(--primary); }
 .footer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 12px rgba(0,0,0,0.05); max-width: 520px; margin: 0 auto; }
 .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -386,6 +425,43 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
     <div class="card">
       <h2>历史测算记录</h2>
       <div id="history-list"><div class="empty-tip">暂无历史记录</div></div>
+    </div>
+  </div>
+
+  <!-- 区县67%激励分解说明 -->
+  <div class="card">
+    <div class="collapse-head" onclick="toggleCollapse('incentive-breakdown')">
+      <span>区县67%激励分解说明</span>
+      <span class="collapse-arrow" id="arrow-incentive-breakdown">▾</span>
+    </div>
+    <div id="incentive-breakdown" class="collapse-body">
+      <div class="collapse-note">依据中电信宁德〔2026〕13号《关于2026年优化DICT项目奖励管理办法》第四节——奖励分配比例。区县公司**成本类项目**激励，区县主体合计占 67%。</div>
+      <div class="break-table-wrap">
+        <table class="break-table">
+          <thead><tr><th>环节</th><th>责任部门</th><th>占比</th></tr></thead>
+          <tbody>
+            <tr><td>商机跟踪</td><td>区县</td><td class="hl">25%</td></tr>
+            <tr><td rowspan="5">售前</td><td>区县</td><td class="hl">15%</td></tr>
+            <tr><td>财务</td><td>7%</td></tr>
+            <tr><td>政企</td><td>8%</td></tr>
+            <tr><td>中台</td><td>4%</td></tr>
+            <tr><td>采购</td><td>1%</td></tr>
+            <tr><td>招标/商务谈判</td><td>区县</td><td class="hl">5%</td></tr>
+            <tr><td rowspan="4">售中</td><td>政企</td><td>5%</td></tr>
+            <tr><td>采购</td><td>3%</td></tr>
+            <tr><td>政企</td><td>5%</td></tr>
+            <tr><td>区县</td><td class="hl">7%</td></tr>
+            <tr><td>收费</td><td>区县</td><td class="hl">5%</td></tr>
+            <tr><td>售后</td><td>区县</td><td class="hl">10%</td></tr>
+          </tbody>
+          <tfoot><tr><td colspan="2">区县合计</td><td class="hl strong">67%</td></tr></tfoot>
+        </table>
+      </div>
+      <div class="collapse-summary">
+        <div>区县占比合计：25%(商机) + 15%(售前) + 5%(招标) + 7%(售中) + 5%(收费) + 10%(售后) = <b>67%</b></div>
+        <div class="sub">其余部门（政企18%、财务7%、采购4%、中台4%）共 33%。</div>
+        <div class="sub note">区县合同金额 &lt; 50万元，市公司不参与激励分配。</div>
+      </div>
     </div>
   </div>
 </div>
@@ -798,6 +874,15 @@ function deleteHistory(id) {
 
 // 初始化
 updateFields();
+
+// ============ 折叠面板(区县67%激励分解说明) ============
+function toggleCollapse(id) {
+  const body = document.getElementById(id);
+  const arrow = document.getElementById('arrow-' + id);
+  if (!body) return;
+  const open = body.classList.toggle('show');
+  if (arrow) arrow.classList.toggle('open', open);
+}
 </script>
 </body>
 </html>

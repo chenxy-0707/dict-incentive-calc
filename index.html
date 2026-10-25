@@ -897,7 +897,7 @@ function renderRoles() {
       <span class="role-name">${r.name}</span>
       <input type="number" class="role-rate" min="0" max="${r.def}" step="0.5" value="${r.pct}" title="上限${r.def}%（文件规定）"
         onchange="setRolePct(${i}, this.value)" ${r.pct >= r.def ? 'style="border-color:var(--primary);color:var(--primary);font-weight:600"' : ''}>
-      <span class="role-pct">% <span style="color:#8A6D1A;font-size:11px">≤${r.def}</span></span>
+      <span class="role-pct">%</span>
     </div>`).join('');
   const total = roleConfig.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
   const sel = roleConfig.filter(r => r.on && isNum(r.pct)).length;

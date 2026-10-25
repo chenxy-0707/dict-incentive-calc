@@ -304,45 +304,29 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
   font-weight: 400;
   margin-left: 6px;
 }
-/* 区县67%激励分解说明 */
-.collapse-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--primary-dark);
-  cursor: pointer;
-  user-select: none;
-}
-.collapse-arrow { font-size: 14px; color: var(--muted); transition: transform .25s; }
-.collapse-arrow.open { transform: rotate(180deg); }
-.collapse-body { display: none; padding-top: 12px; }
-.collapse-body.show { display: block; }
-.collapse-note { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
-.collapse-note b { color: var(--primary); }
-.break-table-wrap { overflow-x: auto; }
-.break-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.break-table th {
-  background: #F0F5FA;
-  color: var(--primary-dark);
-  font-weight: 600;
-  padding: 8px 10px;
-  text-align: left;
-  border-bottom: 1px solid #E2EAF3;
-}
-.break-table td {
-  padding: 7px 10px;
-  border-bottom: 1px solid #EEF2F6;
-  color: var(--text);
-}
-.break-table td.hl { color: var(--primary); font-weight: 600; }
-.break-table tfoot td { background: #F0F5FA; font-weight: 700; padding: 9px 10px; }
-.break-table tfoot td.strong { color: var(--primary); font-size: 15px; }
-.collapse-summary { font-size: 12px; color: var(--text); margin-top: 12px; line-height: 1.7; }
-.collapse-summary .sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-.collapse-summary .note { color: #8A6D1A; }
-.collapse-summary b { color: var(--primary); }
+/* 区县环节分配卡 */
+.role-list { margin-top: 2px; }
+.role-row { display: flex; align-items: center; gap: 10px; padding: 8px 2px; border-bottom: 1px solid #EEF2F6; font-size: 14px; }
+.role-row:last-child { border-bottom: none; }
+.role-row input[type=checkbox] { width: 17px; height: 17px; flex: none; accent-color: var(--primary); cursor: pointer; }
+.role-row .role-name { flex: 1; min-width: 0; }
+.role-row .role-rate { width: 64px; padding: 4px 8px; border: 1px solid #D8E2EC; border-radius: 8px; text-align: right; font-size: 13px; color: var(--text); background: #fff; }
+.role-row .role-rate:focus { outline: none; border-color: var(--primary); }
+.role-row .role-pct { font-size: 12px; color: var(--muted); flex: none; }
+.role-row.unsel .role-name, .role-row.unsel .role-rate { color: var(--muted); }
+.role-toolbar { display: flex; gap: 8px; margin-top: 10px; }
+.btn-mini { border: 1px solid #D8E2EC; background: #fff; color: var(--primary-dark); border-radius: 14px; padding: 3px 12px; font-size: 12px; cursor: pointer; }
+.btn-mini:active { background: #F0F5FA; }
+.role-sum { margin-top: 8px; font-size: 12px; color: var(--primary); font-weight: 600; }
+.card-sub { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+/* 结果页环节分配明细 */
+.personal-box { margin-top: 10px; background: #F0F5FA; border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.7; }
+.personal-box b { color: var(--primary); font-size: 18px; }
+.allo-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.allo-table th { background: #F0F5FA; color: var(--primary-dark); font-weight: 600; padding: 7px 10px; text-align: left; border-bottom: 1px solid #E2EAF3; }
+.allo-table td { padding: 6px 10px; border-bottom: 1px solid #EEF2F6; color: var(--text); }
+.allo-table tr.row-unsel td { color: var(--muted); }
+.allo-table td.hl { color: var(--primary); font-weight: 600; }
 .footer-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -2px 12px rgba(0,0,0,0.05); max-width: 520px; margin: 0 auto; }
 .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -414,6 +398,19 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
       </div>
     </div>
 
+    <div class="card" id="role-card">
+      <h2>区县环节分配 <span class="card-sub">勾选我参与的环节 · 占比可调</span></h2>
+      <div class="role-list" id="role-list"></div>
+      <div class="role-toolbar">
+        <button class="btn-mini" type="button" onclick="setAllRoles(true)">全选</button>
+        <button class="btn-mini" type="button" onclick="setAllRoles(false)">全不选</button>
+        <button class="btn-mini" type="button" onclick="resetRoles()">恢复官方默认</button>
+      </div>
+      <div class="role-sum" id="role-sum"></div>
+      <div class="hint" style="margin-top:8px;">默认＝官方分解（合计67%）；各环节占比可调。仅适用于区县公司内部分配，若市公司参与分配则比例依照文件，各环节占比最高不能超过文件规定值（已达上限不能再向上加）。</div>
+      <div class="hint">小微DICT附加奖励（如有）计入商机跟踪环节。</div>
+    </div>
+
     <button class="btn btn-primary" id="calc-btn" onclick="doCalc()">开始测算</button>
   </div>
 
@@ -428,34 +425,6 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
     </div>
   </div>
 
-  <!-- 区县67%激励分解说明 -->
-  <div class="card">
-    <div class="collapse-head" onclick="toggleCollapse('incentive-breakdown')">
-      <span>区县67%激励分解说明</span>
-      <span class="collapse-arrow" id="arrow-incentive-breakdown">▾</span>
-    </div>
-    <div id="incentive-breakdown" class="collapse-body">
-      <div class="collapse-note">依据中电信宁德〔2026〕13号《关于2026年优化DICT项目奖励管理办法》第四节——奖励分配比例。区县公司<b>成本类项目</b>激励，区县主体合计占 67%。</div>
-      <div class="break-table-wrap">
-        <table class="break-table">
-          <thead><tr><th>环节</th><th>占比</th></tr></thead>
-          <tbody>
-            <tr><td>商机跟踪</td><td class="hl">25%</td></tr>
-            <tr><td>售前</td><td class="hl">15%</td></tr>
-            <tr><td>招标/商务谈判</td><td class="hl">5%</td></tr>
-            <tr><td>售中</td><td class="hl">7%</td></tr>
-            <tr><td>收费</td><td class="hl">5%</td></tr>
-            <tr><td>售后</td><td class="hl">10%</td></tr>
-          </tbody>
-          <tfoot><tr><td>区县合计</td><td class="hl strong">67%</td></tr></tfoot>
-        </table>
-      </div>
-      <div class="collapse-summary">
-        <div>区县占比合计：25%(商机) + 15%(售前) + 5%(招标) + 7%(售中) + 5%(收费) + 10%(售后) = <b>67%</b></div>
-        <div class="sub note">区县合同金额 &lt; 50万元，市公司不参与激励分配。</div>
-      </div>
-    </div>
-  </div>
 </div>
 
 <footer>最终解释权归中国电信所有</footer>
@@ -594,6 +563,11 @@ function saveLocalHistory(list) {
 }
 function addLocalHistory(payload, result) {
   const list = loadLocalHistory();
+  // 环节配置+分配明细快照，历史详情回放不随当前配置漂移
+  if (result && result.qualified && result.cap && result.cap.final > 0) {
+    result._roleConfig = roleConfig.map(r => ({ key: r.key, name: r.name, pct: r.pct, on: r.on }));
+    result._roleAlloc = calcRoleAlloc(result.cap.final, result.micro_extra, result._roleConfig);
+  }
   const rec = {
     id: Date.now(),
     time: (new Date()).toLocaleString('zh-CN', { hour12: false }),
@@ -764,6 +738,29 @@ function renderResult(d) {
       html += `<div class="extra-line">小微DICT附加奖励（毛利5%追加到商机跟踪）：+${d.micro_extra} 万元</div>`;
     }
   }
+  // 环节分配明细（区县内部自行分配 + 我参与环节可拿）
+  if (d.qualified && d.cap && d.cap.final > 0) {
+    const base = d.cap.final;
+    // 优先用记录时的快照，避免历史详情随当前配置漂移
+    const alloc = d._roleAlloc ? d._roleAlloc : calcRoleAlloc(base, d.micro_extra);
+    const cfgRef = d._roleConfig ? d._roleConfig : roleConfig;
+    const totalPct = cfgRef.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
+    let personal = 0, personalCnt = 0;
+    const rowsHtml = alloc.map(a => {
+      if (a.on && a.amount > 0) { personal += a.amount; personalCnt++; }
+      return `<tr class="${a.on ? '' : 'row-unsel'}"><td>${a.name}</td><td>${fmtPct(a.pct)}%</td><td>${a.on ? '✓ 参与' : '—'}</td><td class="hl">${a.amount} 万元${a.extra ? ` <span style="font-size:11px;color:#8A6D1A">(含小微+${a.extra})</span>` : ''}</td></tr>`;
+    }).join('');
+    const grand = alloc.reduce((s, a) => s + a.amount, 0);
+    html += `<div class="personal-box" style="margin-top:14px;">
+      <div><b>我可以拿：${r4(personal)} 万元</b>（勾选了 ${personalCnt} 个参与环节）</div>
+      <table class="allo-table">
+        <thead><tr><th>环节</th><th>占比</th><th>参与</th><th>分配金额</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+        <tfoot><tr><td colspan="3">合计（含小微附加）</td><td><b>${r4(grand)} 万元</b></td></tr></tfoot>
+      </table>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">分配基数 = 最终可发 ${base} 万元${d.micro_extra ? ` + 小微附加 ${d.micro_extra} 万元` : ''}；按各环节占比 ${totalPct}% 归一化分配，各环节占比≤文件规定值${totalPct === 67 ? '（官方默认）' : '（自定义，仅供参考）'}。</div>
+    </div>`;
+  }
   html += '<div class="result-disclaimer">测算结果仅供参考，具体以公司最终核定为准</div>';
   html += '</div>';
   box.innerHTML = html;
@@ -867,14 +864,90 @@ function deleteHistory(id) {
 // 初始化
 updateFields();
 
-// ============ 折叠面板(区县67%激励分解说明) ============
-function toggleCollapse(id) {
-  const body = document.getElementById(id);
-  const arrow = document.getElementById('arrow-' + id);
-  if (!body) return;
-  const open = body.classList.toggle('show');
-  if (arrow) arrow.classList.toggle('open', open);
+// ============ 区县环节分配（勾选 + 占比可调） ============
+const ROLE_KEY = 'dict_role_config_v1';
+const ROLE_DEFAULT = [
+  { key: 'shangji', name: '商机跟踪', def: 25, on: true },
+  { key: 'shouqian', name: '售前', def: 15, on: true },
+  { key: 'zhoubiao', name: '招标/商务谈判', def: 5, on: true },
+  { key: 'shouzhong', name: '售中', def: 7, on: true },
+  { key: 'shoufei', name: '收费', def: 5, on: true },
+  { key: 'shouhou', name: '售后', def: 10, on: true }
+];
+let roleConfig = loadRoleConfig();
+
+function loadRoleConfig() {
+  const saved = JSON.parse(localStorage.getItem(ROLE_KEY) || 'null');
+  const cfg = ROLE_DEFAULT.map(r => {
+    const s = saved && saved.find(x => x.key === r.key);
+    return { key: r.key, name: r.name, def: r.def, pct: s ? Number(s.pct) : r.def, on: s ? !!s.on : true };
+  });
+  return cfg;
 }
+function saveRoleConfig() {
+  try { localStorage.setItem(ROLE_KEY, JSON.stringify(roleConfig.map(r => ({ key: r.key, pct: r.pct, on: r.on })))); } catch (e) {}
+}
+function renderRoles() {
+  const list = document.getElementById('role-list');
+  const sum = document.getElementById('role-sum');
+  if (!list) return;
+  list.innerHTML = roleConfig.map((r, i) => `
+    <div class="role-row ${r.on ? '' : 'unsel'}">
+      <input type="checkbox" ${r.on ? 'checked' : ''} onchange="toggleRole(${i}, this.checked)">
+      <span class="role-name">${r.name}</span>
+      <input type="number" class="role-rate" min="0" max="${r.def}" step="0.5" value="${r.pct}" title="上限${r.def}%（文件规定）"
+        onchange="setRolePct(${i}, this.value)" ${r.pct >= r.def ? 'style="border-color:var(--primary);color:var(--primary);font-weight:600"' : ''}>
+      <span class="role-pct">% <span style="color:#8A6D1A;font-size:11px">≤${r.def}</span></span>
+    </div>`).join('');
+  const total = roleConfig.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
+  const sel = roleConfig.filter(r => r.on && isNum(r.pct)).length;
+  const defTotal = ROLE_DEFAULT.reduce((s, r) => s + r.def, 0);
+  let tag;
+  if (total > defTotal) tag = `（已达文件合计上限 ${defTotal}%）`;
+  else if (total === defTotal) tag = '（官方默认）';
+  else tag = '';
+  sum.innerHTML = `当前总占比 ${fmtPct(total)}% · 已勾选 ${sel} 个环节${tag}`;
+}
+function isNum(v) { return typeof v === 'number' && !isNaN(v) && v >= 0; }
+function fmtPct(x) { return (Math.round(x * 10) / 10).toString(); }
+function toggleRole(i, on) {
+  roleConfig[i].on = on;
+  saveRoleConfig(); renderRoles();
+}
+function setRolePct(i, val) {
+  const v = parseFloat(val);
+  const cap = roleConfig[i].def; // 文件规定的该环节上限
+  if (isNaN(v) || v < 0) { roleConfig[i].pct = 0; }
+  else if (v > cap) {
+    // 超过文件上限时截断到上限值，不再向上加
+    roleConfig[i].pct = cap;
+    showToast(`${roleConfig[i].name}占比已达文件上限 ${cap}%`);
+  } else { roleConfig[i].pct = v; }
+  saveRoleConfig(); renderRoles();
+}
+function setAllRoles(on) {
+  roleConfig.forEach(r => { r.on = on; });
+  saveRoleConfig(); renderRoles();
+}
+function resetRoles() {
+  if (!confirm('恢复官方默认占比（25/15/5/7/5/10，合计67%）？')) return;
+  roleConfig = ROLE_DEFAULT.map(r => ({ key: r.key, name: r.name, def: r.def, pct: r.def, on: true }));
+  saveRoleConfig(); renderRoles();
+  showToast('已恢复官方默认');
+}
+// 计算环节分配明细：金额按占比归一化分配最终可发金额（cfgArr 优先，用于历史回放）
+function calcRoleAlloc(finalAmount, microExtra, cfgArr) {
+  const cfg = cfgArr || roleConfig;
+  const total = cfg.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
+  const microKey = 'shangji';
+  return cfg.map(r => {
+    let amt = total > 0 ? finalAmount * (r.pct || 0) / total : 0;
+    let extra = null;
+    if (microExtra != null && r.key === microKey) { extra = microExtra; amt = r4(amt + microExtra); }
+    return { key: r.key, name: r.name, on: r.on, pct: r.pct, amount: r4(amt), extra: r4(extra) };
+  });
+}
+renderRoles();
 </script>
 </body>
 </html>

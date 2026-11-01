@@ -424,7 +424,7 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
         <button class="btn-mini" type="button" onclick="resetMembers()">恢复默认</button>
       </div>
       <div class="role-sum" id="member-sum"></div>
-      <div class="hint" style="margin-top:8px;">贡献度可自由调整，不要求合计100%；测算时自动按比例归一到100%。分配基数＝区县环节分配金额合计（即结果表中“合计”金额）。</div>
+      <div class="hint" style="margin-top:8px;">贡献度默认不填，测算时按各1/3均分；也可自由填写，不要求合计100%，未填项均分剩余份额后自动归一到100%。分配基数＝区县环节分配金额合计（即结果表中“合计”金额）。</div>
     </div>
 
     <button class="btn btn-primary" id="calc-btn" onclick="doCalc()">开始测算</button>
@@ -790,7 +790,7 @@ function renderResult(d) {
         <tbody>${mRowsHtml}</tbody>
         <tfoot><tr><td colspan="2">合计（区县部分激励）</td><td><b>${r4(mSplit.reduce((s, m) => s + m.amount, 0))} 万元</b></td></tr></tfoot>
       </table>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;">分配基数 = 最终可发 ${base} 万元${d.micro_extra ? ` + 小微附加 ${d.micro_extra} 万元` : ''}；各环节金额 = 基数 × 占比${d._cityJoin === 'no' || (!d._cityJoin && cityJoin === 'no') ? '；市公司不参与分配（合同<50万），占比已合计100%' : `；市公司参与（合同≥50万），区县占比合计${Math.round(totalPct)}%`}${alloc.length > 0 && alloc.reduce((s, a) => s + a.pct, 0) > 100 ? '（占比超100%已等比压缩至100%）' : ''}；角色金额 = 区县环节分配合计 × 贡献度（已归一到100%）。</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">分配基数 = 最终可发 ${base} 万元${d.micro_extra ? ` + 小微附加 ${d.micro_extra} 万元` : ''}；各环节金额 = 基数 × 占比${d._cityJoin === 'no' || (!d._cityJoin && cityJoin === 'no') ? '；市公司不参与分配（合同<50万），占比已合计100%' : `；市公司参与（合同≥50万），区县占比合计${Math.round(totalPct)}%`}${alloc.length > 0 && alloc.reduce((s, a) => s + a.pct, 0) > 100 ? '（占比超100%已等比压缩至100%）' : ''}；角色金额 = 区县环节分配合计 × 贡献度；贡献度未填写时按各1/3均分，填写后自动按比例归一到100%。</div>
     </div>`;
   }
   html += '<div class="result-disclaimer">测算结果仅供参考，具体以公司最终核定为准</div>';
@@ -1063,11 +1063,12 @@ updateRoleHint();
 renderRoles();
 
 // ============ 角色贡献度分配（客户经理/解决方案经理/项目经理） ============
-const MEMBER_KEY = 'dict_member_config_v1';
+const MEMBER_KEY = 'dict_member_config_v2';
+// def:null 表示默认不填，测算时按各1/3均分
 const MEMBER_DEFAULT = [
-  { key: 'khjl', name: '客户经理', def: 33.4 },
-  { key: 'fajl', name: '解决方案经理', def: 33.3 },
-  { key: 'xmjl', name: '项目经理', def: 33.3 }
+  { key: 'khjl', name: '客户经理', def: null },
+  { key: 'fajl', name: '解决方案经理', def: null },
+  { key: 'xmjl', name: '项目经理', def: null }
 ];
 let memberConfig = loadMemberConfig();
 
@@ -1075,7 +1076,7 @@ function loadMemberConfig() {
   const saved = JSON.parse(localStorage.getItem(MEMBER_KEY) || 'null');
   return MEMBER_DEFAULT.map(r => {
     const s = saved && saved.find(x => x.key === r.key);
-    return { key: r.key, name: r.name, def: r.def, pct: s && isNum(Number(s.pct)) ? Number(s.pct) : r.def };
+    return { key: r.key, name: r.name, def: r.def, pct: s ? (s.pct === null || s.pct === undefined ? null : (isNum(Number(s.pct)) ? Number(s.pct) : null)) : r.def };
   });
 }
 function saveMemberConfig() {
@@ -1088,19 +1089,21 @@ function renderMembers() {
   list.innerHTML = memberConfig.map((r, i) => `
     <div class="role-row">
       <span class="role-name">${r.name}</span>
-      <input type="number" class="role-rate" min="0" step="0.5" value="${r.pct}" onchange="setMemberPct(${i}, this.value)">
+      <input type="number" class="role-rate" min="0" step="0.5" value="${r.pct == null ? '' : r.pct}" placeholder="留空均分" onchange="setMemberPct(${i}, this.value)">
       <span class="role-pct">%</span>
     </div>`).join('');
+  const nullCnt = memberConfig.filter(r => !isNum(r.pct)).length;
   const total = memberConfig.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
-  const roundedTotal = Math.round(total * 10) / 10;
-  let tag = '';
-  if (roundedTotal === 100) tag = '（默认）';
-  else if (total > 0) tag = '（测算时自动按比例归一到100%）';
-  sum.innerHTML = `当前贡献度合计 ${fmtPct(total)}%${tag}`;
+  let tag;
+  if (nullCnt === memberConfig.length) tag = '（测算时按各1/3均分）';
+  else if (nullCnt > 0) tag = `（另有 ${nullCnt} 项未填，测算时均分剩余份额）`;
+  else if (Math.round(total * 10) / 10 === 100) tag = '（合计100%）';
+  else tag = '（测算时自动按比例归一到100%）';
+  sum.innerHTML = nullCnt === memberConfig.length ? `贡献度未填写${tag}` : `当前贡献度合计 ${fmtPct(total)}%${tag}`;
 }
 function setMemberPct(i, val) {
   const v = parseFloat(val);
-  if (isNaN(v) || v < 0) { memberConfig[i].pct = 0; }
+  if (isNaN(v) || v < 0) { memberConfig[i].pct = null; }
   else if (v > 100) {
     memberConfig[i].pct = 100;
     showToast(`${memberConfig[i].name}贡献度最高100%，已截断`);
@@ -1108,18 +1111,22 @@ function setMemberPct(i, val) {
   saveMemberConfig(); renderMembers();
 }
 function resetMembers() {
-  if (!confirm('恢复默认贡献度（客户经理33.4%/解决方案经理33.3%/项目经理33.3%）？')) return;
+  if (!confirm('清空全部贡献度？测算时将按各1/3均分。')) return;
   memberConfig = MEMBER_DEFAULT.map(r => ({ key: r.key, name: r.name, def: r.def, pct: r.def }));
   saveMemberConfig(); renderMembers();
-  showToast('已恢复默认');
+  showToast('已清空，测算时按各1/3均分');
 }
-// 计算角色分配：合计自动归一到100%后按贡献度分配区县金额（cfgArr 优先，用于历史回放）
+// 计算角色分配（cfgArr 优先，用于历史回放）：
+// 未填写项 = 剩余份额均分（已填合计超100%时记0），再整体归一到100%
 function calcMemberSplit(countyAmount, cfgArr) {
   const cfg = cfgArr || memberConfig;
-  const total = cfg.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
+  const filledSum = cfg.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
+  const restCnt = cfg.filter(r => !isNum(r.pct)).length;
+  const fillVal = restCnt > 0 ? Math.max(0, (100 - filledSum) / restCnt) : 0;
+  const total = cfg.reduce((s, r) => s + (isNum(r.pct) ? r.pct : fillVal), 0);
   const scale = total > 0 ? 100 / total : 0;
   return cfg.map(r => {
-    const pctUsed = r4((isNum(r.pct) ? r.pct : 0) * scale);
+    const pctUsed = r4((isNum(r.pct) ? r.pct : fillVal) * scale);
     return { key: r.key, name: r.name, pct: pctUsed, amount: r4(countyAmount * pctUsed / 100) };
   });
 }

@@ -319,6 +319,9 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
 .btn-mini:active { background: #F0F5FA; }
 .role-sum { margin-top: 8px; font-size: 12px; color: var(--primary); font-weight: 600; }
 .card-sub { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+/* 市公司分配情形徽标 */
+.city-badge { margin: 8px 0 2px; padding: 7px 10px; background: #E8F1FD; border: 1px solid #C7DDF5; border-radius: 8px; font-size: 12px; color: var(--primary-dark); line-height: 1.5; }
+.city-badge.no-city { background: #FFF7E6; border-color: #F3E2BD; color: #8A6D1A; }
 /* 结果页环节分配明细 */
 .personal-box { margin-top: 10px; background: #F0F5FA; border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.7; }
 .personal-box b { color: var(--primary); font-size: 18px; }
@@ -354,10 +357,10 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
     <div class="card">
       <h2>测算模式</h2>
       <div class="seg" id="mode-seg">
-        <button data-mode="income" class="active">按主营收入测算</button>
-        <button data-mode="amount">按项目金额测算</button>
+        <button data-mode="amount" class="active">按项目金额测算</button>
+        <button data-mode="income">按主营收入测算</button>
       </div>
-      <div class="hint" id="amount-mode-tip" style="display:none; margin-top:8px;">只知项目总价和利润率时使用：系统自动换算主营收入后测算</div>
+      <div class="hint" id="amount-mode-tip" style="margin-top:8px;">只知道合同金额和利润率时使用：系统自动换算主营收入后测算；金额<50万时自动按"市公司不参与分配"换算占比</div>
     </div>
     <div class="card">
       <h2>项目基本信息</h2>
@@ -369,18 +372,20 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
           <button data-type="mixed">混合类</button>
         </div>
       </div>
-      <div class="field" id="amount-field" style="display:none;">
-        <label>项目总金额（含税）</label>
-        <div class="unit"><input type="number" id="total-amount" placeholder="请输入项目总金额" min="0" step="0.01"></div>
+      <div class="field" id="amount-field">
+        <label>合同金额（万元）＝项目总金额（含税）</label>
+        <div class="unit"><input type="number" id="total-amount" placeholder="请输入合同总金额" min="0" step="0.01" oninput="autoCityJoin()"></div>
+        <div class="hint" id="city-auto-hint">金额≥50万元：市公司参与分配（官方67%分解）；<50万元：市公司不参与（占比自动换算到100%）</div>
       </div>
       <div class="field" id="profit-rate-field" style="display:none;">
         <label>项目利润率</label>
         <div class="unit pct"><input type="number" id="profit-rate" placeholder="请输入百分比，如20" min="0" step="0.01"></div>
         <div class="hint">主营收入 = 项目总金额 × 利润率 ÷ 10% ÷ 1.06</div>
       </div>
-      <div class="field" id="income-field">
+      <div class="field" id="income-field" style="display:none;">
         <label>项目 DICT 主营收入（不含税）</label>
         <div class="unit"><input type="number" id="income" placeholder="请输入金额" min="0" step="0.01"></div>
+        <div class="hint"><50万元时请用按项目金额模式，自动处理市公司不参与情形</div>
       </div>
       <div class="field" id="margin-field">
         <label>项目 DICT 毛利率</label>
@@ -399,16 +404,27 @@ footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px
     </div>
 
     <div class="card" id="role-card">
-      <h2>区县环节分配 <span class="card-sub">勾选我参与的环节 · 占比可调</span></h2>
+      <h2>区县环节分配 <span class="card-sub" id="role-sub">勾选我参与的环节 · 占比可调</span></h2>
+      <div class="city-badge" id="city-badge" style="display:none;"></div>
       <div class="role-list" id="role-list"></div>
       <div class="role-toolbar">
         <button class="btn-mini" type="button" onclick="setAllRoles(true)">全选</button>
         <button class="btn-mini" type="button" onclick="setAllRoles(false)">全不选</button>
-        <button class="btn-mini" type="button" onclick="resetRoles()">恢复官方默认</button>
+        <button class="btn-mini" type="button" onclick="resetRoles()">恢复默认</button>
       </div>
       <div class="role-sum" id="role-sum"></div>
-      <div class="hint" style="margin-top:8px;">默认＝官方分解（合计67%）；各环节占比可调。仅适用于区县公司内部分配，若市公司参与分配则比例依照文件，各环节占比最高不能超过文件规定值（已达上限不能再向上加）。</div>
+      <div class="hint" style="margin-top:8px;" id="role-hint">默认＝官方分解（合计67%）；各环节占比可调，单环节占比最高不超过文件规定值（已达上限不能再向上加）。</div>
       <div class="hint">小微DICT附加奖励（如有）计入商机跟踪环节。</div>
+    </div>
+
+    <div class="card" id="member-card">
+      <h2>角色贡献度分配 <span class="card-sub">区县部分激励按角色二次分配</span></h2>
+      <div class="role-list" id="member-list"></div>
+      <div class="role-toolbar">
+        <button class="btn-mini" type="button" onclick="resetMembers()">恢复默认</button>
+      </div>
+      <div class="role-sum" id="member-sum"></div>
+      <div class="hint" style="margin-top:8px;">贡献度可自由调整，不要求合计100%；测算时自动按比例归一到100%。分配基数＝区县环节分配金额合计（即结果表中“合计”金额）。</div>
     </div>
 
     <button class="btn btn-primary" id="calc-btn" onclick="doCalc()">开始测算</button>
@@ -565,8 +581,12 @@ function addLocalHistory(payload, result) {
   const list = loadLocalHistory();
   // 环节配置+分配明细快照，历史详情回放不随当前配置漂移
   if (result && result.qualified && result.cap && result.cap.final > 0) {
-    result._roleConfig = roleConfig.map(r => ({ key: r.key, name: r.name, pct: r.pct, on: r.on }));
+    result._cityJoin = cityJoin;
+    result._roleConfig = roleConfig.map(r => ({ key: r.key, name: r.name, pct: r.pct, on: r.on, def: r.def }));
     result._roleAlloc = calcRoleAlloc(result.cap.final, result.micro_extra, result._roleConfig);
+    const countyAmt = result._roleAlloc.reduce((s, a) => s + a.amount, 0);
+    result._memberConfig = memberConfig.map(r => ({ key: r.key, name: r.name, pct: r.pct }));
+    result._memberSplit = calcMemberSplit(countyAmt, result._memberConfig);
   }
   const rec = {
     id: Date.now(),
@@ -596,7 +616,7 @@ function getDeviceId() {
 
 // ============ 状态 ============
 let projType = 'cost';
-let calcMode = 'income';   // 'income' 按主营收入 | 'amount' 按项目金额
+let calcMode = 'amount';   // 'amount' 按项目金额（默认） | 'income' 按主营收入
 let currentResult = null;
 
 // ============ 模式切换 ============
@@ -606,6 +626,7 @@ document.querySelectorAll('#mode-seg button').forEach(btn => {
     btn.classList.add('active');
     calcMode = btn.dataset.mode;
     updateFields();
+    autoCityJoin();
   });
 });
 
@@ -619,16 +640,19 @@ document.querySelectorAll('#type-seg button').forEach(btn => {
   });
 });
 function updateFields() {
-  const isCost = projType === 'cost';
-  const isInvest = projType === 'invest';
-  const isMixed = projType === 'mixed';
   const isAmount = calcMode === 'amount';
   // 模式相关字段显隐
   document.getElementById('amount-field').style.display = isAmount ? '' : 'none';
   document.getElementById('profit-rate-field').style.display = isAmount ? '' : 'none';
   document.getElementById('income-field').style.display = isAmount ? 'none' : '';
-  document.getElementById('amount-mode-tip').style.display = isAmount ? '' : 'none';
+  document.getElementById('amount-mode-tip').style.display = '';
+  document.getElementById('amount-mode-tip').textContent = isAmount
+    ? '只知道合同金额和利润率时使用：系统自动换算主营收入后测算；金额<50万时自动按"市公司不参与分配"换算占比'
+    : '适用于已知道主营收入的情形；合同金额<50万元时请改用按项目金额模式，才能自动处理市公司不参与情形。';
   // 类型相关字段显隐
+  const isCost = projType === 'cost';
+  const isInvest = projType === 'invest';
+  const isMixed = projType === 'mixed';
   document.getElementById('margin-field').style.display = (isCost || isMixed) ? '' : 'none';
   document.getElementById('cost-field').style.display = (isCost || isMixed) ? '' : 'none';
   document.getElementById('irr-field').style.display = (isInvest || isMixed) ? '' : 'none';
@@ -751,6 +775,8 @@ function renderResult(d) {
       return `<tr class="${a.on ? '' : 'row-unsel'}"><td>${a.name}</td><td>${fmtPct(a.pct)}%</td><td>${a.on ? '✓ 参与' : '—'}</td><td class="hl">${a.amount} 万元${a.extra ? ` <span style="font-size:11px;color:#8A6D1A">(含小微+${a.extra})</span>` : ''}</td></tr>`;
     }).join('');
     const grand = alloc.reduce((s, a) => s + a.amount, 0);
+    const mSplit = d._memberSplit ? d._memberSplit : calcMemberSplit(grand);
+    const mRowsHtml = mSplit.map(m => `<tr><td>${m.name}</td><td>${fmtPct(m.pct)}%</td><td class="hl">${m.amount} 万元</td></tr>`).join('');
     html += `<div class="personal-box" style="margin-top:14px;">
       <div><b>我可以拿：${r4(personal)} 万元</b>（勾选了 ${personalCnt} 个参与环节）</div>
       <table class="allo-table">
@@ -758,7 +784,13 @@ function renderResult(d) {
         <tbody>${rowsHtml}</tbody>
         <tfoot><tr><td colspan="3">合计（含小微附加）</td><td><b>${r4(grand)} 万元</b></td></tr></tfoot>
       </table>
-      <div style="font-size:11px;color:var(--muted);margin-top:6px;">分配基数 = 最终可发 ${base} 万元${d.micro_extra ? ` + 小微附加 ${d.micro_extra} 万元` : ''}；按各环节占比 ${totalPct}% 归一化分配，各环节占比≤文件规定值${totalPct === 67 ? '（官方默认）' : '（自定义，仅供参考）'}。</div>
+      <div style="font-size:13px;font-weight:600;color:var(--primary-dark);margin-top:12px;">角色贡献度分配（区县部分激励 ${r4(grand)} 万元）</div>
+      <table class="allo-table">
+        <thead><tr><th>角色</th><th>贡献度</th><th>分配金额</th></tr></thead>
+        <tbody>${mRowsHtml}</tbody>
+        <tfoot><tr><td colspan="2">合计（区县部分激励）</td><td><b>${r4(mSplit.reduce((s, m) => s + m.amount, 0))} 万元</b></td></tr></tfoot>
+      </table>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;">分配基数 = 最终可发 ${base} 万元${d.micro_extra ? ` + 小微附加 ${d.micro_extra} 万元` : ''}；各环节金额 = 基数 × 占比${d._cityJoin === 'no' || (!d._cityJoin && cityJoin === 'no') ? '；市公司不参与分配（合同<50万），占比已合计100%' : `；市公司参与（合同≥50万），区县占比合计${Math.round(totalPct)}%`}${alloc.length > 0 && alloc.reduce((s, a) => s + a.pct, 0) > 100 ? '（占比超100%已等比压缩至100%）' : ''}；角色金额 = 区县环节分配合计 × 贡献度（已归一到100%）。</div>
     </div>`;
   }
   html += '<div class="result-disclaimer">测算结果仅供参考，具体以公司最终核定为准</div>';
@@ -874,11 +906,84 @@ const ROLE_DEFAULT = [
   { key: 'shoufei', name: '收费', def: 5, on: true },
   { key: 'shouhou', name: '售后', def: 10, on: true }
 ];
+// 市公司不参与时，文件未规定各环节占比，25/15/5/7/5/10 按比例放大到 100%（67× 1.49253）
+const ROLE_DEFAULT_NO_CITY = [
+  { key: 'shangji', name: '商机跟踪', def: 37.5, on: true },
+  { key: 'shouqian', name: '售前', def: 22.5, on: true },
+  { key: 'zhoubiao', name: '招标/商务谈判', def: 7.5, on: true },
+  { key: 'shouzhong', name: '售中', def: 10.5, on: true },
+  { key: 'shoufei', name: '收费', def: 7.5, on: true },
+  { key: 'shouhou', name: '售后', def: 15, on: true }
+];
+const CITY_KEY = 'dict_city_join_v1';
+let cityJoin = 'yes';  // 'yes' 参与（合同≥50万）| 'no' 不参与（合同<50万）——由 autoCityJoin() 自动判定
 let roleConfig = loadRoleConfig();
 
+function currentDefaults() {
+  const base = cityJoin === 'no' ? ROLE_DEFAULT_NO_CITY : ROLE_DEFAULT;
+  return base.map(r => ({ key: r.key, name: r.name, def: r.def }));
+}
+// 根据合同金额输入自动判定市公司是否参与分配（仅按项目金额模式生效）
+function autoCityJoin() {
+  if (calcMode !== 'amount') {
+    // 按主营收入模式：恢复官方分解
+    applyCityJoin('yes', false);
+    return;
+  }
+  const el = document.getElementById('total-amount');
+  const amount = el ? parseFloat(el.value) : NaN;
+  let target = 'yes';
+  if (!isNaN(amount) && amount > 0 && amount < 50) target = 'no';
+  applyCityJoin(target, true);
+  // 更新徽标与提示
+  const badge = document.getElementById('city-badge');
+  if (badge) {
+    if (cityJoin === 'no') {
+      badge.style.display = '';
+      badge.className = 'city-badge no-city';
+      badge.innerHTML = '市公司不参与分配（合同金额 < 50万）：占比已换算到合计100%，各环节上限100%';
+    } else if (!isNaN(amount) && amount > 0) {
+      badge.style.display = '';
+      badge.className = 'city-badge';
+      badge.innerHTML = '市公司参与分配（合同金额 ≥ 50万）：官方67%分解';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+// 执行情形切换（silent=true 不弹 toast，适合输入过程联动的场景）
+function applyCityJoin(v, silent) {
+  if (v === cityJoin) return;
+  const from = roleConfig.map(r => r.pct);
+  const fromTotal = from.reduce((s, x) => s + (isNum(x) ? x : 0), 0);
+  cityJoin = v;
+  const defs = currentDefaults();
+  const toTotal = v === 'no' ? 100 : 67;
+  roleConfig.forEach((r, i) => {
+    r.def = defs[i].def;
+    r.pct = fromTotal > 0 ? r4(from[i] / fromTotal * toTotal) : defs[i].def;
+    if (r.pct > r.def) r.pct = r.def;
+  });
+  saveRoleConfig();
+  renderRoles();
+  updateRoleHint();
+  if (!silent) {
+    showToast(v === 'no'
+      ? '市公司不参与（合同<50万）：占比已按比例放大到合计100%'
+      : '市公司参与（合同≥50万）：占比已按比例缩回合计67%');
+  }
+}
+function updateRoleHint() {
+  const el = document.getElementById('role-hint');
+  if (!el) return;
+  el.innerHTML = cityJoin === 'no'
+    ? '市公司不参与分配（合同<50万）：剩余33%留在区县本地，占比已按比例换算到合计100%，各环节占比上限为 100%。'
+    : '默认＝官方分解（合计67%）；各环节占比可调，单环节占比最高不超过文件规定值（已达上限不能再向上加）。';
+}
 function loadRoleConfig() {
+  const base = cityJoin === 'no' ? ROLE_DEFAULT_NO_CITY : ROLE_DEFAULT;
   const saved = JSON.parse(localStorage.getItem(ROLE_KEY) || 'null');
-  const cfg = ROLE_DEFAULT.map(r => {
+  const cfg = base.map(r => {
     const s = saved && saved.find(x => x.key === r.key);
     return { key: r.key, name: r.name, def: r.def, pct: s ? Number(s.pct) : r.def, on: s ? !!s.on : true };
   });
@@ -895,16 +1000,19 @@ function renderRoles() {
     <div class="role-row ${r.on ? '' : 'unsel'}">
       <input type="checkbox" ${r.on ? 'checked' : ''} onchange="toggleRole(${i}, this.checked)">
       <span class="role-name">${r.name}</span>
-      <input type="number" class="role-rate" min="0" max="${r.def}" step="0.5" value="${r.pct}" title="上限${r.def}%（文件规定）"
+      <input type="number" class="role-rate" min="0" max="${r.def}" step="0.5" value="${r.pct}" title="上限${r.def}%"
         onchange="setRolePct(${i}, this.value)" ${r.pct >= r.def ? 'style="border-color:var(--primary);color:var(--primary);font-weight:600"' : ''}>
       <span class="role-pct">%</span>
     </div>`).join('');
   const total = roleConfig.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
   const sel = roleConfig.filter(r => r.on && isNum(r.pct)).length;
-  const defTotal = ROLE_DEFAULT.reduce((s, r) => s + r.def, 0);
+  const defTotal = cityJoin === 'no' ? 100 : ROLE_DEFAULT.reduce((s, r) => s + r.def, 0);
+  const roundedTotal = Math.round(total * 10) / 10;
   let tag;
-  if (total > defTotal) tag = `（已达文件合计上限 ${defTotal}%）`;
-  else if (total === defTotal) tag = '（官方默认）';
+  if (roundedTotal > defTotal) tag = cityJoin === 'no' ? '（超过100%）' : `（已超文件合计上限 ${defTotal}%）`;
+  else if (cityJoin === 'no' && roundedTotal === 100) tag = '（市公司不参与，自动换算）';
+  else if (cityJoin === 'no') tag = '（市公司不参与）';
+  else if (roundedTotal === defTotal) tag = '（官方默认）';
   else tag = '';
   sum.innerHTML = `当前总占比 ${fmtPct(total)}% · 已勾选 ${sel} 个环节${tag}`;
 }
@@ -916,12 +1024,11 @@ function toggleRole(i, on) {
 }
 function setRolePct(i, val) {
   const v = parseFloat(val);
-  const cap = roleConfig[i].def; // 文件规定的该环节上限
+  const cap = cityJoin === 'no' ? 100 : roleConfig[i].def; // 市公司不参与时无文件约束，上限 100%
   if (isNaN(v) || v < 0) { roleConfig[i].pct = 0; }
   else if (v > cap) {
-    // 超过文件上限时截断到上限值，不再向上加
     roleConfig[i].pct = cap;
-    showToast(`${roleConfig[i].name}占比已达文件上限 ${cap}%`);
+    showToast(cityJoin === 'no' ? `${roleConfig[i].name}占比已超过100%，已截断` : `${roleConfig[i].name}占比已达文件上限 ${cap}%`);
   } else { roleConfig[i].pct = v; }
   saveRoleConfig(); renderRoles();
 }
@@ -930,24 +1037,93 @@ function setAllRoles(on) {
   saveRoleConfig(); renderRoles();
 }
 function resetRoles() {
-  if (!confirm('恢复官方默认占比（25/15/5/7/5/10，合计67%）？')) return;
-  roleConfig = ROLE_DEFAULT.map(r => ({ key: r.key, name: r.name, def: r.def, pct: r.def, on: true }));
+  if (!confirm(cityJoin === 'no' ? '恢复默认占比（37.5/22.5/7.5/10.5/7.5/15，合计100%）？' : '恢复官方默认占比（25/15/5/7/5/10，合计67%）？')) return;
+  const defs = currentDefaults();
+  roleConfig = defs.map(r => ({ key: r.key, name: r.name, def: r.def, pct: r.def, on: true }));
   saveRoleConfig(); renderRoles();
-  showToast('已恢复官方默认');
+  showToast('已恢复默认');
 }
-// 计算环节分配明细：金额按占比归一化分配最终可发金额（cfgArr 优先，用于历史回放）
+// 计算环节分配明细：各环节金额 = 分配基数 × 环节占比（cfgArr 优先，用于历史回放）
+// 市公司参与：基数 = 最终可发×67%口径下的占比（默认官方 67%）
+// 市公司不参与：占比已换算到合计100%，基数全额归区县
 function calcRoleAlloc(finalAmount, microExtra, cfgArr) {
   const cfg = cfgArr || roleConfig;
   const total = cfg.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
   const microKey = 'shangji';
+  const scale = total > 100 ? 100 / total : 1; // 合计超限时等比压缩到 100%（不改变相对比例）
   return cfg.map(r => {
-    let amt = total > 0 ? finalAmount * (r.pct || 0) / total : 0;
+    const pctUsed = (r.pct || 0) * scale;
+    let amt = finalAmount * pctUsed / 100;
     let extra = null;
     if (microExtra != null && r.key === microKey) { extra = microExtra; amt = r4(amt + microExtra); }
-    return { key: r.key, name: r.name, on: r.on, pct: r.pct, amount: r4(amt), extra: r4(extra) };
+    return { key: r.key, name: r.name, on: r.on, pct: pctUsed, amount: r4(amt), extra: r4(extra) };
   });
 }
+updateRoleHint();
 renderRoles();
+
+// ============ 角色贡献度分配（客户经理/解决方案经理/项目经理） ============
+const MEMBER_KEY = 'dict_member_config_v1';
+const MEMBER_DEFAULT = [
+  { key: 'khjl', name: '客户经理', def: 33.4 },
+  { key: 'fajl', name: '解决方案经理', def: 33.3 },
+  { key: 'xmjl', name: '项目经理', def: 33.3 }
+];
+let memberConfig = loadMemberConfig();
+
+function loadMemberConfig() {
+  const saved = JSON.parse(localStorage.getItem(MEMBER_KEY) || 'null');
+  return MEMBER_DEFAULT.map(r => {
+    const s = saved && saved.find(x => x.key === r.key);
+    return { key: r.key, name: r.name, def: r.def, pct: s && isNum(Number(s.pct)) ? Number(s.pct) : r.def };
+  });
+}
+function saveMemberConfig() {
+  try { localStorage.setItem(MEMBER_KEY, JSON.stringify(memberConfig.map(r => ({ key: r.key, pct: r.pct })))); } catch (e) {}
+}
+function renderMembers() {
+  const list = document.getElementById('member-list');
+  const sum = document.getElementById('member-sum');
+  if (!list) return;
+  list.innerHTML = memberConfig.map((r, i) => `
+    <div class="role-row">
+      <span class="role-name">${r.name}</span>
+      <input type="number" class="role-rate" min="0" step="0.5" value="${r.pct}" onchange="setMemberPct(${i}, this.value)">
+      <span class="role-pct">%</span>
+    </div>`).join('');
+  const total = memberConfig.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
+  const roundedTotal = Math.round(total * 10) / 10;
+  let tag = '';
+  if (roundedTotal === 100) tag = '（默认）';
+  else if (total > 0) tag = '（测算时自动按比例归一到100%）';
+  sum.innerHTML = `当前贡献度合计 ${fmtPct(total)}%${tag}`;
+}
+function setMemberPct(i, val) {
+  const v = parseFloat(val);
+  if (isNaN(v) || v < 0) { memberConfig[i].pct = 0; }
+  else if (v > 100) {
+    memberConfig[i].pct = 100;
+    showToast(`${memberConfig[i].name}贡献度最高100%，已截断`);
+  } else { memberConfig[i].pct = v; }
+  saveMemberConfig(); renderMembers();
+}
+function resetMembers() {
+  if (!confirm('恢复默认贡献度（客户经理33.4%/解决方案经理33.3%/项目经理33.3%）？')) return;
+  memberConfig = MEMBER_DEFAULT.map(r => ({ key: r.key, name: r.name, def: r.def, pct: r.def }));
+  saveMemberConfig(); renderMembers();
+  showToast('已恢复默认');
+}
+// 计算角色分配：合计自动归一到100%后按贡献度分配区县金额（cfgArr 优先，用于历史回放）
+function calcMemberSplit(countyAmount, cfgArr) {
+  const cfg = cfgArr || memberConfig;
+  const total = cfg.reduce((s, r) => s + (isNum(r.pct) ? r.pct : 0), 0);
+  const scale = total > 0 ? 100 / total : 0;
+  return cfg.map(r => {
+    const pctUsed = r4((isNum(r.pct) ? r.pct : 0) * scale);
+    return { key: r.key, name: r.name, pct: pctUsed, amount: r4(countyAmount * pctUsed / 100) };
+  });
+}
+renderMembers();
 </script>
 </body>
 </html>

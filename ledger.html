@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>激励台账 - DICT项目奖励</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232D5F8A'/><text x='50' y='70' font-size='54' text-anchor='middle' fill='white'>簿</text></svg>">
+<style>
+:root {
+  --primary: #2D5F8A;
+  --primary-dark: #1C3A5E;
+  --accent: #E8A838;
+  --bg: #F4F6F8;
+  --card: #FFFFFF;
+  --text: #2B3A4A;
+  --muted: #7A8A99;
+  --success: #2A7A4B;
+  --danger: #C0392B;
+  --radius: 14px;
+  --shadow: 0 4px 20px rgba(45,95,138,0.08);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+}
+.container { max-width: 520px; margin: 0 auto; padding: 16px 16px 40px; }
+header {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  color: #fff;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+header h1 { font-size: 20px; font-weight: 600; }
+header p { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.card h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card h2::before {
+  content: "";
+  width: 4px; height: 16px;
+  background: var(--primary);
+  border-radius: 2px;
+}
+.tab-bar {
+  display: flex;
+  background: #EEF2F6;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 16px;
+}
+.tab-bar button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 11px;
+  border-radius: 9px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.tab-bar button.active { background: #fff; color: var(--primary); font-weight: 600; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+.empty-tip { text-align: center; color: var(--muted); padding: 30px 0; font-size: 14px; }
+footer { text-align: center; font-size: 11px; color: var(--muted); padding: 10px 0 20px; }
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: rgba(43, 58, 74, 0.9);
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity .25s, transform .25s;
+  pointer-events: none;
+  max-width: 80%;
+  text-align: center;
+}
+.toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.btn-mini { border: 1px solid #D8E2EC; background: #fff; color: var(--primary-dark); border-radius: 14px; padding: 3px 12px; font-size: 12px; cursor: pointer; }
+.btn-mini:active { background: #F0F5FA; }
+.card-sub { font-size: 12px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+.allo-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+.allo-table th { background: #F0F5FA; color: var(--primary-dark); font-weight: 600; padding: 7px 10px; text-align: left; border-bottom: 1px solid #E2EAF3; }
+.allo-table td { padding: 6px 10px; border-bottom: 1px solid #EEF2F6; color: var(--text); }
+.allo-table td.hl { color: var(--primary); font-weight: 600; }
+.allo-table .cell-amt { display: block; font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 1px; }
+.allo-table tfoot td { border-top: 1px solid #E2EAF3; }
+/* 激励台账 */
+.ledger-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ledger-table { min-width: 560px; font-size: 12px; }
+.ledger-table th, .ledger-table td { padding: 6px 6px; text-align: right; white-space: nowrap; }
+.ledger-table th:first-child, .ledger-table td:first-child { text-align: left; }
+.ledger-table .ledger-row { cursor: pointer; }
+.ledger-table .ledger-row td:first-child b { color: var(--primary-dark); font-size: 13px; }
+.ledger-table .ledger-row:active { background: #F5F8FB; }
+.ledger-detail > td { background: #FAFBFC; }
+.ledger-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+.ledger-tools .spacer { flex: 1; }
+.ledger-del { border: none; background: transparent; color: var(--danger); font-size: 12px; padding: 2px 4px; cursor: pointer; }
+.ledger-meta { font-size: 11px; color: var(--muted); margin: 6px 0; line-height: 1.6; }
+/* 令牌弹窗 */
+.modal-mask { position: fixed; left: 0; top: 0; right: 0; bottom: 0; background: rgba(28,42,58,0.45); z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.modal-card { background: #fff; border-radius: 14px; padding: 18px; width: 100%; max-width: 360px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+.modal-card h3 { font-size: 15px; color: var(--primary-dark); margin-bottom: 12px; }
+.modal-card input { width: 100%; padding: 12px 14px; border: 1.5px solid #E0E6EC; border-radius: 10px; font-size: 15px; outline: none; background: #FAFBFC; }
+.modal-card input:focus { border-color: var(--primary); background: #fff; }
+.modal-btns { display: flex; gap: 10px; margin-top: 14px; }
+.modal-btns .btn-mini { flex: 1; padding: 10px; font-size: 14px; border-radius: 10px; }
+.modal-btns .btn-primary { flex: 2; padding: 10px; font-size: 14px; border-radius: 10px; }
+.btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; }
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>激励台账</h1>
+    <p>全组共享 · 数据存于 GitHub 私密仓库 · 凭令牌读写</p>
+  </header>
+
+  <div class="tab-bar">
+    <button onclick="location.href='index.html'">项目测算</button>
+    <button class="active">激励台账</button>
+  </div>
+
+  <div class="card">
+    <h2>台账记录 <span class="card-sub">点击行展开环节×角色明细</span></h2>
+    <div class="ledger-tools">
+      <button class="btn-mini" type="button" onclick="renderLedger(true)">刷新</button>
+      <button class="btn-mini" type="button" onclick="exportLedger()">导出Excel</button>
+      <button class="btn-mini" type="button" onclick="openTokenModal()" title="查看/更换/清除本机保存的台账令牌">令牌</button>
+      <span class="spacer"></span>
+    </div>
+    <div id="ledger-list"><div class="empty-tip">加载中...</div></div>
+  </div>
+
+  <!-- 台账令牌弹窗（首次使用输入，验证后存本机） -->
+  <div class="modal-mask" id="token-modal" style="display:none;">
+    <div class="modal-card">
+      <h3>台账访问令牌</h3>
+      <div style="font-size:12px;color:#888;margin-bottom:8px;text-align:left;">首次使用请粘贴管理员提供的台账令牌，验证通过后保存在本机浏览器，之后无需重复输入。</div>
+      <input type="password" id="token-input" placeholder="粘贴台账令牌" onkeydown="if(event.key==='Enter'){event.preventDefault();confirmLedgerToken();}">
+      <div class="modal-btns">
+        <button class="btn-mini" type="button" id="token-clear-btn" onclick="clearLedgerToken()" style="display:none;">清除本机令牌</button>
+        <button class="btn-mini" type="button" onclick="closeTokenModal()">取消</button>
+        <button class="btn btn-primary" type="button" id="token-ok-btn" onclick="confirmLedgerToken()">验证并保存</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>最终解释权归中国电信所有</footer>
+
+<script>
+'use strict';
+// ============ 小工具 ============
+function r4(x) { return Math.round(x * 10000) / 10000; }
+function fmtPct(x) { return (Math.round(x * 10) / 10).toString(); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function showToast(msg) {
+  let t = document.getElementById('toast');
+  if (t) { t.remove(); }
+  t = document.createElement('div');
+  t.id = 'toast';
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(() => t.classList.add('show'));
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, 2200);
+}
+// ============ 激励台账（GitHub API 共享存储：私密仓库 dict-incentive-ledger / ledger.json） ============
+const LEDGER_CFG = {
+  owner: 'chenxy-0707',
+  repo: 'dict-incentive-ledger',
+  path: 'ledger.json',
+  branch: 'main'
+};
+// 台账令牌不写入代码（避免 GitHub push protection 拦截与泄露风险）：首次使用时弹窗输入，验证后保存在本机浏览器
+let pendingAfterToken = null;   // 令牌验证成功后待继续的动作：'export'
+const LEDGER_TOKEN_KEY = 'dict_ledger_token';
+function getLedgerToken() { try { return localStorage.getItem(LEDGER_TOKEN_KEY) || ''; } catch (e) { return ''; } }
+function setLedgerToken(t) { try { localStorage.setItem(LEDGER_TOKEN_KEY, t); } catch (e) {} }
+function removeLedgerToken() { try { localStorage.removeItem(LEDGER_TOKEN_KEY); } catch (e) {} }
+function openTokenModal() {
+  const t = getLedgerToken();
+  const inp = document.getElementById('token-input');
+  inp.value = '';
+  document.getElementById('token-clear-btn').style.display = t ? '' : 'none';
+  document.getElementById('token-modal').style.display = 'flex';
+  setTimeout(function () { inp.focus(); }, 60);
+}
+function closeTokenModal() { pendingAfterToken = null; document.getElementById('token-modal').style.display = 'none'; }
+function clearLedgerToken() {
+  removeLedgerToken();
+  closeTokenModal();
+  showToast('已清除本机令牌');
+  ledgerCache = null;
+  renderLedger(true);
+}
+async function confirmLedgerToken() {
+  const t = document.getElementById('token-input').value.trim();
+  if (!t) { showToast('请粘贴令牌'); return; }
+  const act = pendingAfterToken;
+  const btn = document.getElementById('token-ok-btn');
+  const oldText = btn.textContent;
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> 验证中...';
+  setLedgerToken(t);
+  ledgerCache = null;
+  try {
+    await ledgerFetch(true);   // 用新令牌实际读一次台账验证
+    closeTokenModal();
+    showToast('令牌有效，已保存到本机');
+    if (act === 'export') { exportLedger(); return; }
+    renderLedger(true);
+  } catch (e) {
+    removeLedgerToken();
+    showToast('令牌验证失败：' + (e.message || '请检查后重试'));
+  } finally {
+    btn.disabled = false; btn.textContent = oldText;
+  }
+}
+let ledgerCache = null;   // { sha, records } 会话内缓存
+
+function ledgerApiUrl() {
+  return 'https://api.github.com/repos/' + LEDGER_CFG.owner + '/' + LEDGER_CFG.repo + '/contents/' + LEDGER_CFG.path;
+}
+function ledgerHeaders(hasBody) {
+  const h = {
+    'Accept': 'application/vnd.github+json',
+    'Authorization': 'Bearer ' + getLedgerToken(),
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+  if (hasBody) h['Content-Type'] = 'application/json';
+  return h;
+}
+function b64ToUtf8(b64) {
+  const bin = atob(String(b64).replace(/\s/g, ''));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  try { return new TextDecoder('utf-8').decode(bytes); }
+  catch (e) { return decodeURIComponent(escape(bin)); }
+}
+function utf8ToB64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+}
+async function ledgerFetch(force) {
+  if (!force && ledgerCache) return ledgerCache;
+  const res = await fetch(ledgerApiUrl() + '?ref=' + encodeURIComponent(LEDGER_CFG.branch) + '&t=' + Date.now(), { headers: ledgerHeaders(false), cache: 'no-store' });
+  if (res.status === 404) { ledgerCache = { sha: null, records: [] }; return ledgerCache; }
+  if (!res.ok) throw new Error('读取台账失败（HTTP ' + res.status + '）');
+  const data = await res.json();
+  let records = [];
+  try { records = data.content ? JSON.parse(b64ToUtf8(data.content)) : []; } catch (e) { records = []; }
+  ledgerCache = { sha: data.sha, records: Array.isArray(records) ? records : [] };
+  return ledgerCache;
+}
+async function ledgerPut(records) {
+  const body = {
+    message: '更新激励台账 ' + (new Date()).toLocaleString('zh-CN', { hour12: false }),
+    content: utf8ToB64(JSON.stringify(records)),
+    branch: LEDGER_CFG.branch
+  };
+  if (ledgerCache && ledgerCache.sha) body.sha = ledgerCache.sha;
+  const res = await fetch(ledgerApiUrl(), { method: 'PUT', headers: ledgerHeaders(true), body: JSON.stringify(body) });
+  if (!res.ok) {
+    let msg = 'HTTP ' + res.status;
+    try { const j = await res.json(); if (j && j.message) msg += '：' + j.message; } catch (e) {}
+    throw new Error('写入台账失败（' + msg + '）');
+  }
+  const data = await res.json();
+  if (data.content && data.content.sha) ledgerCache = { sha: data.content.sha, records: records };
+  return true;
+}
+// 删除（sha 冲突时自动重取重试一次）
+async function deleteLedgerRecord(id) {
+  const store = await ledgerFetch();
+  const idx = store.records.findIndex(x => x.id === id);
+  if (idx === -1) throw new Error('记录不存在，请刷新后重试');
+  store.records.splice(idx, 1);
+  try { await ledgerPut(store.records); }
+  catch (e) {
+    if (!/409|422/.test(String(e.message))) throw e;
+    ledgerCache = null;
+    const store2 = await ledgerFetch(true);
+    const idx2 = store2.records.findIndex(x => x.id === id);
+    if (idx2 === -1) throw new Error('台账已更新，请刷新后重试');
+    store2.records.splice(idx2, 1);
+    await ledgerPut(store2.records);
+  }
+}
+// ============ 台账渲染 ============
+async function renderLedger(force) {
+  const box = document.getElementById('ledger-list');
+  if (!getLedgerToken()) {
+    box.innerHTML = '<div class="empty-tip">尚未配置台账令牌，暂无法访问共享台账。<br><button class="btn-mini" type="button" onclick="openTokenModal()" style="margin:10px 0;">输入令牌</button><br><span style="font-size:11px;color:#999;">令牌由管理员统一提供，验证后保存在本机浏览器，无需重复输入</span></div>';
+    return;
+  }
+  box.innerHTML = '<div class="empty-tip">加载中...</div>';
+  try {
+    const store = await ledgerFetch(!!force);
+    if (!store.records.length) { box.innerHTML = '<div class="empty-tip">台账暂无记录。在<a href="index.html">测算页</a>完成测算后点击「保存到激励台账」即可保存到这里。</div>'; return; }
+    box.innerHTML = renderLedgerTable(store.records);
+  } catch (e) {
+    if (ledgerCache && ledgerCache.records.length) {
+      box.innerHTML = renderLedgerTable(ledgerCache.records) + '<div class="ledger-meta">提示：刷新失败（' + esc(e.message || '') + '），当前展示缓存数据</div>';
+    } else {
+      box.innerHTML = '<div class="empty-tip">加载失败：' + esc(e.message || '') + '<br>请点击「刷新」重试</div>';
+    }
+  }
+}
+function renderLedgerTable(records) {
+  const typeName = { cost: '成本类', invest: '投资类', mixed: '混合类' };
+  let html = '<div class="ledger-wrap"><table class="allo-table ledger-table"><thead><tr>';
+  html += '<th>项目名称</th><th>保存时间</th><th>合同金额</th><th>总激励</th><th>区县激励</th><th>角色合计</th><th>区县留存</th><th></th>';
+  html += '</tr></thead><tbody>';
+  records.forEach((r, i) => {
+    const c = r.calc || {};
+    const amt = (c.totalAmount != null ? c.totalAmount + '万' : (c.income != null ? '收入' + c.income + '万' : '—'));
+    html += '<tr class="ledger-row" onclick="toggleLedgerDetail(' + i + ')">';
+    html += '<td><b>' + esc(r.name) + '</b><span class="cell-amt">' + (typeName[c.projType] || '') + '</span></td>';
+    html += '<td>' + esc(r.time || '') + '</td>';
+    html += '<td>' + amt + '</td>';
+    html += '<td>' + (r.total != null ? r.total : '—') + '</td>';
+    html += '<td>' + (r.grand != null ? r.grand : '—') + '</td>';
+    html += '<td>' + (r.grandAlloc != null ? r.grandAlloc : '—') + '</td>';
+    html += '<td>' + (r.grandUnalloc != null ? r.grandUnalloc : '—') + '</td>';
+    html += '<td><button class="ledger-del" type="button" onclick="event.stopPropagation();ledgerDelete(\'' + r.id + '\')">删除</button></td>';
+    html += '</tr>';
+    html += '<tr class="ledger-detail" id="ledger-detail-' + i + '" style="display:none;"><td colspan="8">' + renderLedgerDetail(r) + '</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<div class="ledger-meta">共 ' + records.length + ' 条 · 单位：万元 · 点击行展开环节×角色明细 · 数据存于 GitHub 私密仓库（凭令牌读写）</div>';
+  return html;
+}
+function renderLedgerDetail(r) {
+  const c = r.calc || {};
+  let html = '<div style="font-size:12px;">';
+  if (c.totalAmount != null) {
+    html += '<div>合同金额 ' + c.totalAmount + ' 万元' + (c.profitRate != null ? ' · 利润率 ' + (c.profitRate * 100).toFixed(2) + '%' : '') + ' · 换算主营收入 ' + c.income + ' 万元</div>';
+  } else {
+    html += '<div>主营收入 ' + c.income + ' 万元</div>';
+  }
+  html += '<div>' + esc(c.incentiveType || '') + ' · 总激励 ' + (r.total != null ? r.total : '—') + ' 万元' + (r.microExtra != null ? '（含小微附加 +' + r.microExtra + '）' : '') + '</div>';
+  if (r.stageMatrix && r.stageMatrix.length) {
+    const mems = r.stageMatrix[0].members || [];
+    html += '<table class="allo-table" style="margin-top:8px;"><thead><tr><th>环节</th>';
+    mems.forEach(m => { html += '<th>' + esc(m.name) + '</th>'; });
+    html += '<th>未分配</th></tr></thead><tbody>';
+    r.stageMatrix.forEach(row => {
+      html += '<tr><td>' + esc(row.name) + '<span class="cell-amt">环节 ' + row.amount + ' 万</span></td>';
+      (row.members || []).forEach(m => {
+        html += '<td>' + (m.pct > 0 ? fmtPct(m.pct) + '%' : '—') + '<span class="cell-amt">' + m.amount + ' 万</span></td>';
+      });
+      html += '<td>' + (row.unallocAmt != null && row.unallocAmt > 0 ? '<span class="cell-amt">' + r4(row.unallocAmt) + ' 万</span>' : '—') + '</td></tr>';
+    });
+    html += '</tbody><tfoot><tr><td>角色激励总和</td>';
+    (r.memberTotals || []).forEach(m => { html += '<td class="hl">' + m.amount + ' 万</td>'; });
+    html += '<td>' + (r.grandUnalloc != null && r.grandUnalloc > 0 ? r4(r.grandUnalloc) + ' 万' : '—') + '</td></tr>';
+    html += '<tr><td colspan="' + (3 + (r.memberTotals || []).length) + '">角色合计 ' + r4(r.grandAlloc || 0) + ' 万元 + 区县留存 ' + r4(r.grandUnalloc || 0) + ' 万元（区县环节分配合计 ' + (r.grand != null ? r.grand : '—') + ' 万元）</td></tr>';
+    html += '</tfoot></table>';
+  }
+  html += '</div>';
+  return html;
+}
+function toggleLedgerDetail(i) {
+  const el = document.getElementById('ledger-detail-' + i);
+  if (el) el.style.display = (el.style.display === 'none') ? '' : 'none';
+}
+async function ledgerDelete(id) {
+  if (!confirm('确定从共享台账删除该条记录？')) return;
+  try {
+    await deleteLedgerRecord(id);
+    showToast('已删除');
+    renderLedger();
+  } catch (e) {
+    showToast(e.message || '删除失败，请重试');
+  }
+}
+// 导出 Excel（Sheet1 激励汇总 / Sheet2 环节明细，SheetJS 懒加载双源）
+let xlsxLoading = null;
+function loadXLSX() {
+  if (window.XLSX) return Promise.resolve();
+  if (xlsxLoading) return xlsxLoading;
+  const sources = [
+    'https://registry.npmmirror.com/xlsx/0.18.5/files/dist/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  xlsxLoading = new Promise((resolve, reject) => {
+    let idx = 0;
+    const tryNext = () => {
+      if (idx >= sources.length) { xlsxLoading = null; reject(new Error('Excel 组件加载失败，请检查网络后重试')); return; }
+      const s = document.createElement('script');
+      s.src = sources[idx++];
+      s.onload = () => resolve();
+      s.onerror = () => { s.remove(); tryNext(); };
+      document.head.appendChild(s);
+    };
+    tryNext();
+  });
+  return xlsxLoading;
+}
+async function exportLedger() {
+  if (!getLedgerToken()) { pendingAfterToken = 'export'; openTokenModal(); return; }
+  try {
+    const store = await ledgerFetch();
+    if (!store.records.length) { showToast('台账暂无记录'); return; }
+    showToast('正在生成 Excel...');
+    await loadXLSX();
+    exportLedgerWorkbook(store.records);
+  } catch (e) {
+    showToast(e.message || '导出失败，请重试');
+  }
+}
+function exportLedgerWorkbook(records) {
+  const typeName = { cost: '成本类', invest: '投资类', mixed: '混合类' };
+  const wb = XLSX.utils.book_new();
+  const s1 = [['项目名称', '保存时间', '项目类型', '测算模式', '合同金额(万元)', '利润率(%)', '主营收入(万元)', '总激励(万元)', '小微附加(万元)', '区县激励(万元)', '客户经理(万元)', '解决方案经理(万元)', '项目经理(万元)', '角色合计(万元)', '区县留存(万元)']];
+  records.forEach(r => {
+    const c = r.calc || {};
+    const mt = r.memberTotals || [];
+    const find = k => { const m = mt.find(x => x.key === k); return m ? m.amount : ''; };
+    s1.push([
+      r.name || '', r.time || '', typeName[c.projType] || '', c.totalAmount != null ? '按金额' : '按收入',
+      c.totalAmount != null ? c.totalAmount : '', c.profitRate != null ? r4(c.profitRate * 100) : '', c.income != null ? c.income : '',
+      r.total != null ? r.total : '', r.microExtra != null ? r.microExtra : '', r.grand != null ? r.grand : '',
+      find('khjl'), find('fajl'), find('xmjl'), r.grandAlloc != null ? r.grandAlloc : '', r.grandUnalloc != null ? r.grandUnalloc : ''
+    ]);
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s1), '激励汇总');
+  const s2 = [['项目名称', '环节', '环节金额(万元)', '角色', '贡献度(%)', '分配金额(万元)']];
+  records.forEach(r => {
+    (r.stageMatrix || []).forEach(row => {
+      (row.members || []).forEach(m => {
+        s2.push([r.name || '', row.name, row.amount, m.name, m.pct || 0, m.amount]);
+      });
+      s2.push([r.name || '', row.name, row.amount, '未分配（区县留存）', '', row.unallocAmt || 0]);
+    });
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s2), '环节明细');
+  const d = new Date();
+  const ymd = d.getFullYear() + ('0' + (d.getMonth() + 1)).slice(-2) + ('0' + d.getDate()).slice(-2);
+  XLSX.writeFile(wb, 'DICT激励台账_' + ymd + '.xlsx');
+}
+renderLedger();
+</script>
+</body>
+</html>
